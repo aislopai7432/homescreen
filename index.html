@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slop Games</title>
+<style>
+  :root {
+    --bg: #0f0f14;
+    --card: #1b1b24;
+    --card-hover: #262633;
+    --text: #f2f2f7;
+    --muted: #9a9aad;
+    --accent: #7cf29c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 900px; margin: 0 auto; padding: 48px 16px; }
+  h1 { font-size: 2.4rem; margin: 0 0 4px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); margin: 0 0 32px; }
+  #games {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .game {
+    display: block;
+    padding: 20px;
+    border-radius: 14px;
+    background: var(--card);
+    color: inherit;
+    text-decoration: none;
+    border: 1px solid #2c2c3a;
+    transition: background .15s, transform .15s, border-color .15s;
+  }
+  .game:hover, .game:focus-visible {
+    background: var(--card-hover);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    outline: none;
+  }
+  .game h2 { margin: 0 0 8px; font-size: 1.2rem; }
+  .game p { margin: 0; color: var(--muted); font-size: .95rem; line-height: 1.4; }
+  .play { display: inline-block; margin-top: 14px; color: var(--accent); font-weight: 600; }
+  #status { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Slop <span>Games</span></h1>
+  <p class="sub">Pick a game to play.</p>
+  <p id="status">Loading games…</p>
+  <div id="games"></div>
+</main>
+
+<script>
+  // GitHub account whose games get listed.
+  const USER = "aislopai7432";
+  // Repos that are not games and should not be listed.
+  const HIDDEN = ["homescreen", USER + ".github.io"];
+  // Optional nicer names/descriptions, keyed by repo name.
+  const OVERRIDES = {
+    slopbrowsergame: { title: "Browser Slop Game" },
+  };
+  // Used if the GitHub API can't be reached (e.g. rate limit).
+  const FALLBACK = [{ name: "slopbrowsergame", description: "" }];
+
+  const statusEl = document.getElementById("status");
+  const gamesEl = document.getElementById("games");
+
+  function prettify(name) {
+    return name.replace(/[-_]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function render(repos) {
+    gamesEl.innerHTML = "";
+    if (!repos.length) {
+      statusEl.textContent = "No games yet.";
+      return;
+    }
+    statusEl.remove();
+    for (const repo of repos) {
+      const o = OVERRIDES[repo.name] || {};
+      const a = document.createElement("a");
+      a.className = "game";
+      a.href = `https://${USER}.github.io/${repo.name}/`;
+      const h = document.createElement("h2");
+      h.textContent = o.title || prettify(repo.name);
+      const p = document.createElement("p");
+      p.textContent = o.description || repo.description || "";
+      const play = document.createElement("span");
+      play.className = "play";
+      play.textContent = "Play →";
+      a.append(h, p, play);
+      gamesEl.append(a);
+    }
+  }
+
+  fetch(`https://api.github.com/users/${USER}/repos?per_page=100&sort=created&direction=desc`)
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(repos => render(repos.filter(r => r.has_pages && !r.fork && !HIDDEN.includes(r.name))))
+    .catch(() => render(FALLBACK));
+</script>
+</body>
+</html>
